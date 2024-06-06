@@ -41,6 +41,7 @@ const Weather = () => {
     if (!response.ok) {
       throw new Error("Network response was not ok");
     }
+    inputRef.current.value = "";
     return response.json();
   };
 
