@@ -84,3 +84,15 @@
   color: white;
   margin-left: -60px;
 }
+
+
+.highlight {
+  background-color: yellow;
+  transition: background-color 0.5s ease;
+}
+
+.last-update {
+  font-size: 0.8em;
+  color: #666;
+  margin-top: 10px;
+}

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import conf from "../conf/conf";
 import "./Weather.css";
 import {
@@ -16,6 +16,8 @@ import { useQuery } from "@tanstack/react-query";
 const Weather = () => {
   const [city, setCity] = useState("mumbai"); // Default city
   const inputRef = useRef();
+  const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
+  const [highlightedFields, setHighlightedFields] = useState({});
 
   const allIcons = {
     "01d": clear,
@@ -42,13 +44,43 @@ const Weather = () => {
       throw new Error("Network response was not ok");
     }
     inputRef.current.value = "";
-    return response.json();
+    // return response.json();
+
+    // Simulate random changes in temperature and humidity
+    const data = await response.json();
+    data.main.temp += Math.random() > 0.5 ? 1 : -1;
+    data.main.humidity += Math.floor(Math.random() * 5) - 2;
+
+    return data;
   };
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: ["weather", city],
     queryFn: () => fetchWeather(city),
+    staleTime: 5000,
+    refetchInterval: 1000 * 60 * 2, // Refetch every 2 min demonstra
   });
+
+  useEffect(() => {
+    if (data) {
+      const newHighlightedFields = {};
+      if (Math.abs(data.main.temp - (data.main.temp | 0)) > 0.5) {
+        newHighlightedFields.temperature = true;
+      }
+      if (data.main.humidity % 5 === 0) {
+        newHighlightedFields.humidity = true;
+      }
+      setHighlightedFields(newHighlightedFields);
+      setLastUpdateTime(new Date(dataUpdatedAt));
+
+      // Clear highlights after 3 seconds
+      const timer = setTimeout(() => {
+        setHighlightedFields({});
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [data, dataUpdatedAt]);
 
   const searchWeather = () => {
     const city = inputRef.current.value;
@@ -76,13 +108,21 @@ const Weather = () => {
             alt="weather-icon"
             className="weather-icon"
           />
-          <p className="temperature">{Math.floor(data.main.temp)}⁰c </p>
+          <p
+            className={`temperature ${
+              highlightedFields.temperature ? "highlight" : ""
+            }`}
+          >
+            {Math.floor(data.main.temp)}⁰c
+          </p>
           <p className="location">{data.name} </p>
           <div className="weather-data">
             <div className="col">
               <img src={humidity} alt="humidity-icon" />
               <div>
-                <p>{data.main.humidity} %</p>
+                <p className={highlightedFields.humidity ? "highlight" : ""}>
+                  {data.main.humidity} %
+                </p>
                 <span>Humidity</span>
               </div>
             </div>
@@ -94,6 +134,9 @@ const Weather = () => {
               </div>
             </div>
           </div>
+          <p className="last-update">
+            Last updated: {lastUpdateTime.toLocaleTimeString()}
+          </p>
         </>
       ) : null}
     </div>
@@ -101,141 +144,3 @@ const Weather = () => {
 };
 
 export default Weather;
-
-//===============old code========
-// import React, { useEffect, useRef, useState } from "react";
-// import conf from "../conf/conf";
-// import "./Weather.css";
-// import {
-//   search,
-//   clear,
-//   cloud,
-//   drizzle,
-//   humidity,
-//   rain,
-//   snow,
-//   wind,
-// } from "../assets/index";
-// import { useQuery } from "@tanstack/react-query";
-// // import axios from "axios";
-
-// const Weather = () => {
-//   const [wetherData, setwetherData] = useState(false);
-//   const inputRef = useRef();
-// //   const [error, setError] = useState(false);
-
-//   const allIcons = {
-//     "01d": clear,
-//     "01n": clear,
-//     "02d": cloud,
-//     "02n": cloud,
-//     "03d": cloud,
-//     "03n": cloud,
-//     "04d": drizzle,
-//     "04n": drizzle,
-//     "09d": rain,
-//     "09n": rain,
-//     "10d": rain,
-//     "10n": rain,
-//     "13d": snow,
-//     "13n": snow,
-//   };
-
-//   //   const searchWeather = async (city) => {
-//   //     setError(false);
-//   //     if (city === "") {
-//   //       // console.log('al1')
-//   //       alert("Enter City Name");
-//   //       return;
-//   //     }
-//   //     try {
-//   //       const response = await axios.get(
-//   //         `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${conf.apiKey}`
-//   //       );
-
-//   //       const data = response.data;
-//   //       //   console.log("data::::", data);
-//   //       // if (!response.ok) {
-//   //       //     console.log('al2')
-//   //       //   alert(data.message);
-//   //       //   return;
-//   //       // }
-
-//   //       //   console.log("data:::", data);
-//   //       const icon = allIcons[data.weather[0].icon] || clear;
-//   //       setwetherData({
-//   //         humidity: data.main.humidity,
-//   //         windSpeed: data.wind.speed,
-//   //         temperature: Math.floor(data.main.temp), //oly integer value
-//   //         location: data.name,
-//   //         icon: icon,
-//   //       });
-//   //       inputRef.current.value = "";
-//   //     } catch (error) {
-//   //       console.log("Error in fetching weather data");
-//   //       setwetherData(false);
-//   //       setError(true);
-//   //     }
-//   //   };
-
-//   //   console.log("wetherData::", wetherData);
-
-//   //   useEffect(() => {
-//   //     searchWeather("bangalore");
-//   //   }, []);
-
-// const {data, isLoading, error} = useQuery({
-//     queryKey: ['weather'],
-//     queryFn: () => fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${conf.apiKey}`).then(res => res.json())
-// })
-
-// if (isLoading) return <span>Loading...</span>
-// if (error) return <span>Tanstack Error:: {error.message} </span>
-
-// console.log("data from tanstact query::", data)
-
-//   return (
-//     <div className="weather">
-//       <div className="search-bar">
-//         <input ref={inputRef} type="text" placeholder="Search City" />
-//         <img
-//           onClick={() => searchWeather(inputRef.current.value)}
-//           src={search}
-//           alt="search-icon"
-//         />
-//       </div>
-//       {/* {error ? <h6 className="dummy">Error fetching wether data....</h6> : null} */}
-//       {wetherData ? (
-//         <>
-//           <img
-//             src={wetherData.icon}
-//             alt="weather-icon"
-//             className="weather-icon"
-//           />
-//           <p className="temperature">{wetherData.temperature}⁰c </p>
-//           <p className="location">{wetherData.location} </p>
-//           <div className="weather-data">
-//             <div className="col">
-//               <img src={humidity} alt="humiditity-icon" />
-//               <div>
-//                 <p>{wetherData.humidity} %</p>
-//                 <span>Humidity</span>
-//               </div>
-//             </div>
-//             <div className="col">
-//               <img src={wind} alt="wind-icon" />
-//               <div>
-//                 <p> {wetherData.windSpeed} Km/h</p>
-//                 <span>Wind Speed</span>
-//               </div>
-//             </div>
-//           </div>
-//         </>
-//       ) : (
-//         <></>
-//       )}
-//     </div>
-//   );
-// };
-
-// export default Weather;
